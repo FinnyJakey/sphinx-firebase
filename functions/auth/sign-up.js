@@ -8,7 +8,12 @@ exports.signUp = onRequest((request, response) => {
         "username": data["username"],
         "createdAt": data["createdAt"],
     }).then(() => {
-        response.status(200).send("Registered");
+        admin.firestore().collection("projects").doc(data["uuid"]).collection("tasks").add({
+        }).then(r => {
+            response.status(200).send("Registered");
+        }).catch((error) => {
+            response.status(400).send(error);
+        });
     }).catch((error) => {
         response.status(400).send(error);
     });
