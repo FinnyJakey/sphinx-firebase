@@ -1,16 +1,17 @@
-const {onRequest} = require("firebase-functions/v1/https");
+// const {onRequest} = require("firebase-functions/v1/https");
 const Busboy = require("busboy");
 const admin = require("../firebase-admin-init");
 const {Timestamp} = require("firebase-admin/firestore");
 const {OpenAI} = require("openai");
+const functions = require('firebase-functions');
 
 const {v1: vision} = require("@google-cloud/vision");
 
-const openai = new OpenAI({apiKey: "sk-proj-mItkB4i0UWwTmL7xGFuCT3BlbkFJ0R0MMklVee6qolslyeNW"});
+const openai = new OpenAI({apiKey: "sk-proj-EHKIZCebWOM88wTKnzFsT3BlbkFJbxUMiHHfrMEG4R31DSSo"});
 const client = new vision.ImageAnnotatorClient();
 const bucket = admin.storage().bucket();
 
-exports.createProject = onRequest(async (request, response) => {
+exports.createProject = functions.runWith({ timeoutSeconds: 120 }).https.onRequest(async (request, response) => {
     let projectName = null;
     let uuid = null;
     let documentId = null;
@@ -73,7 +74,7 @@ exports.createProject = onRequest(async (request, response) => {
             "file": `${documentId}.pdf`,
             "createdAt": Timestamp.now(),
             "summarized": summarized,
-            "tests": [],
+            "tests": tests,
         });
 
         response.status(200).send();
@@ -122,36 +123,54 @@ async function getPdfText(uuid, fileName) {
 
     const [files] = await bucket.getFiles({ prefix });
 
-    const file = files[0];
-
-    const [contents] = await file.download();
-
-    await file.delete();
-
-    const jsonData = JSON.parse(contents.toString());
-
     let text = "";
 
-    jsonData.responses.forEach(response => {
-        text += response.fullTextAnnotation.text;
-    });
+    for (const file of files) {
+        const [contents] = await file.download();
+
+        const jsonData = JSON.parse(contents.toString());
+
+        jsonData.responses.forEach(response => {
+            text += response.fullTextAnnotation.text;
+        });
+
+        await file.delete();
+    }
 
     return text;
 }
 
 async function getSummarizedText(text) {
-    // let system_prompt = `You are a helpful assistant designed to return summarized text.
-    // Please provide a comprehensive summary of the given text.
-    // The summary should cover all the key points and main ideas presented in the original text, while also condensing the information into a concise and easy-to-understand format.
-    // Please ensure that the summary includes relevant details and examples that support the main ideas, while avoiding any unnecessary information or repetition.
-    // The length of the summary should be appropriate for the length and complexity of the original text, providing a clear and accurate overview without omitting any important information.
+    // let system_prompt = `
+    // Please provide a concise and comprehensive summary of the given text.
+    // The summary should capture the main points and key details of the text while conveying the author's intended meaning accurately.
+    // Please ensure that the summary is well-organized and easy to read, with clear headings and subheadings to guide the reader through each section.
+    // The length of the summary should be appropriate to capture the main points and key details of the text, without including unnecessary information or becoming overly long.
+    // Identify the language of the given text and provide the summary of that language.
     // `;
     let system_prompt = `
-    Please provide a concise and comprehensive summary of the given text.
-    The summary should capture the main points and key details of the text while conveying the author's intended meaning accurately.
-    Please ensure that the summary is well-organized and easy to read, with clear headings and subheadings to guide the reader through each section.
-    The length of the summary should be appropriate to capture the main points and key details of the text, without including unnecessary information or becoming overly long.
-    Identify the language of the given text and provide the summary of that language.
+    You are a Learning Material PDF Summary Expert, specialized in summarizing lecture materials for university students.
+    You are going to make a summary of a lecture PDF to help a diligent university student study more efficiently.
+    
+    Here is how you will summarize the lecture PDF:
+  
+    First,
+    Detect the language of the content of a given PDF and create the summary in the detected language.
+    For example, if the content of the PDF is in Korean, the summary should be provided in Korean.
+    If the PDF contains a mix of several languages, detect the language as Korean.
+  
+    Second,
+    We need detailed key points extraction.
+    Identify and extract detailed key points and main ideas from each section of the PDF.
+    Focus on the most important concepts, definitions, and arguments.
+    Explanation of each concept should be properly extracted for students to understand.
+    Additionally, extract supporting details, examples, and sub-points.
+    Pay attention to diagrams, charts, and tables, and include their descriptions and significance.
+  
+    Third,
+    Create a detailed and well-organized summary of the extracted key points, covering all sections of the PDF from start to finish.
+    Ensure the summary is clear and easy to understand, maintaining the logical flow of the original material.
+    Each section should reflect the depth of information from the original document, including explanations and examples. 
     `;
 
     const completion = await openai.chat.completions.create({
@@ -167,6 +186,8 @@ async function getSummarizedText(text) {
         ],
         model: "gpt-3.5-turbo-0125",
     });
+
+    console.log(completion.choices[0].message.content);
 
     return completion.choices[0].message.content;
 }
@@ -238,6 +259,12 @@ async function getTests(text) {
     - The distribution of options and answers should be evenly distributed.
     - The answer of the question should not be too many zeros.
     - Identify the LANGUAGE of the given text and provide the output of that LANGUAGE.
+    
+    - Detect the language of the content of a given TEXT and create the tests in the detected language.
+    - For example, if the content of the PDF is in Korean, the summary should be provided in Korean.
+    - If the TEXT contains a mix of several languages, detect the language as Korean.
+    
+    - The length of the array for the tests don't have to be five. You can create like 10 and more tests if you can.
     `;
 
     const completion = await openai.chat.completions.create({
