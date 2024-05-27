@@ -7,7 +7,7 @@ const functions = require('firebase-functions');
 
 const {v1: vision} = require("@google-cloud/vision");
 
-const openai = new OpenAI({apiKey: "sk-proj-EHKIZCebWOM88wTKnzFsT3BlbkFJbxUMiHHfrMEG4R31DSSo"});
+const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
 const client = new vision.ImageAnnotatorClient();
 const bucket = admin.storage().bucket();
 
