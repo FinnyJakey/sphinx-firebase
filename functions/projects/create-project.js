@@ -7,11 +7,11 @@ const functions = require('firebase-functions');
 
 const {v1: vision} = require("@google-cloud/vision");
 
-const openai = new OpenAI({apiKey: process.env.OPENAI_API_KEY});
+const openai = new OpenAI({apiKey: "sk-proj-PJhhwxqdvX3EGg368ncsT3BlbkFJhzdgrN4iPJFRd24YxDWM"});
 const client = new vision.ImageAnnotatorClient();
 const bucket = admin.storage().bucket();
 
-exports.createProject = functions.runWith({ timeoutSeconds: 120 }).https.onRequest(async (request, response) => {
+exports.createProject = functions.runWith({ timeoutSeconds: 240 }).https.onRequest(async (request, response) => {
     let projectName = null;
     let uuid = null;
     let documentId = null;
@@ -74,10 +74,10 @@ exports.createProject = functions.runWith({ timeoutSeconds: 120 }).https.onReque
             "file": `${documentId}.pdf`,
             "createdAt": Timestamp.now(),
             "summarized": summarized,
-            "tests": tests,
+            "tests": tests["tests"],
         });
 
-        response.status(200).send();
+        response.status(200).send(documentId);
 
     });
 
@@ -193,78 +193,128 @@ async function getSummarizedText(text) {
 }
 
 async function getTests(text) {
-    let system_prompt = `You are a helpful examiner designed to output this JSON format:
-    
-    {
-        "tests": [
-            {
-                "question": "<your to the user's question paragraph. The question 1 of the quiz . Must be contained in a single paragraph>"
-                "options": [
-                    "<your to the user's OPTION number 0 of the question>",
-                    "<your to the user's OPTION number 1 of the question>",
-                    "<your to the user's OPTION number 2 of the question>",
-                    "<your to the user's OPTION number 3 of the question>"
-                ],
-                "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
-                "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
-            },
-            {
-               "question": "<your to the user's question paragraph. The question 2 of the quiz. Must be contained in a single paragraph>"
-                "options": [
-                    "<your to the user's OPTION number 0 of the question>",
-                    "<your to the user's OPTION number 1 of the question>",
-                    "<your to the user's OPTION number 2 of the question>",
-                    "<your to the user's OPTION number 3 of the question>"
-                ],
-                "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
-                "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>" 
-            },
-            {
-                "question": "<your to the user's question paragraph. The question 3 of the quiz. Must be contained in a single paragraph>"
-                "options": [
-                    "<your to the user's OPTION number 0 of the question>",
-                    "<your to the user's OPTION number 1 of the question>",
-                    "<your to the user's OPTION number 2 of the question>",
-                    "<your to the user's OPTION number 3 of the question>"
-                ],
-                "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
-                "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
-            },
-            {
-                "question": "<your to the user's question paragraph. The question 4 of the quiz. Must be contained in a single paragraph>"
-                "options": [
-                    "<your to the user's OPTION number 0 of the question>",
-                    "<your to the user's OPTION number 1 of the question>",
-                    "<your to the user's OPTION number 2 of the question>",
-                    "<your to the user's OPTION number 3 of the question>"
-                ],
-                "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
-                "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
-            },
-            {
-                "question": "<your to the user's question paragraph. The question 5 of the quiz. Must be contained in a single paragraph>"
-                "options": [
-                    "<your to the user's OPTION number 0 of the question>",
-                    "<your to the user's OPTION number 1 of the question>",
-                    "<your to the user's OPTION number 2 of the question>",
-                    "<your to the user's OPTION number 3 of the question>"
-                ],
-                "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
-                "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
-            }
-        ]
-    }
-    
-    - Check the text given by the user and create five questions accordingly.
-    - The distribution of options and answers should be evenly distributed.
-    - The answer of the question should not be too many zeros.
-    - Identify the LANGUAGE of the given text and provide the output of that LANGUAGE.
-    
-    - Detect the language of the content of a given TEXT and create the tests in the detected language.
-    - For example, if the content of the PDF is in Korean, the summary should be provided in Korean.
-    - If the TEXT contains a mix of several languages, detect the language as Korean.
-    
-    - The length of the array for the tests don't have to be five. You can create like 10 and more tests if you can.
+    // let system_prompt = `You are a helpful examiner designed to output this JSON format:
+    //
+    // {
+    //     "tests": [
+    //         {
+    //             "question": "<your to the user's question paragraph. The question 1 of the quiz . Must be contained in a single paragraph>"
+    //             "options": [
+    //                 "<your to the user's OPTION number 0 of the question>",
+    //                 "<your to the user's OPTION number 1 of the question>",
+    //                 "<your to the user's OPTION number 2 of the question>",
+    //                 "<your to the user's OPTION number 3 of the question>"
+    //             ],
+    //             "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+    //             "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+    //         },
+    //         {
+    //            "question": "<your to the user's question paragraph. The question 2 of the quiz. Must be contained in a single paragraph>"
+    //             "options": [
+    //                 "<your to the user's OPTION number 0 of the question>",
+    //                 "<your to the user's OPTION number 1 of the question>",
+    //                 "<your to the user's OPTION number 2 of the question>",
+    //                 "<your to the user's OPTION number 3 of the question>"
+    //             ],
+    //             "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+    //             "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+    //         },
+    //         {
+    //             "question": "<your to the user's question paragraph. The question 3 of the quiz. Must be contained in a single paragraph>"
+    //             "options": [
+    //                 "<your to the user's OPTION number 0 of the question>",
+    //                 "<your to the user's OPTION number 1 of the question>",
+    //                 "<your to the user's OPTION number 2 of the question>",
+    //                 "<your to the user's OPTION number 3 of the question>"
+    //             ],
+    //             "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+    //             "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+    //         },
+    //         {
+    //             "question": "<your to the user's question paragraph. The question 4 of the quiz. Must be contained in a single paragraph>"
+    //             "options": [
+    //                 "<your to the user's OPTION number 0 of the question>",
+    //                 "<your to the user's OPTION number 1 of the question>",
+    //                 "<your to the user's OPTION number 2 of the question>",
+    //                 "<your to the user's OPTION number 3 of the question>"
+    //             ],
+    //             "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+    //             "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+    //         },
+    //         {
+    //             "question": "<your to the user's question paragraph. The question 5 of the quiz. Must be contained in a single paragraph>"
+    //             "options": [
+    //                 "<your to the user's OPTION number 0 of the question>",
+    //                 "<your to the user's OPTION number 1 of the question>",
+    //                 "<your to the user's OPTION number 2 of the question>",
+    //                 "<your to the user's OPTION number 3 of the question>"
+    //             ],
+    //             "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+    //             "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+    //         }
+    //     ]
+    // }
+    //
+    // - Check the text given by the user and create five questions accordingly.
+    // - The distribution of options and answers should be evenly distributed.
+    // - The answer of the question should not be too many zeros.
+    // - Identify the LANGUAGE of the given text and provide the output of that LANGUAGE.
+    //
+    // - Detect the language of the content of a given TEXT and create the tests in the detected language.
+    // - For example, if the content of the PDF is in Korean, the summary should be provided in Korean.
+    // - If the TEXT contains a mix of several languages, detect the language as Korean.
+    //
+    // - The length of the array for the tests don't have to be five. You can create like 10 and more tests if you can.
+    // `;
+
+    let system_prompt = `
+      You are an Education Expert, specialized in creating educational contents and assessments for university students. 
+      You are going to generate quiz questions based on the provided text of a lecture material. 
+      Here is how you will create the quiz questions: 
+
+      *Requirement 1: output needs to be designed with following JSON format:
+
+        {
+            "tests": [
+                {
+                    "question": "<your to the user's question paragraph. The question 1 of the quiz . Must be contained in a single paragraph>"
+                    "options": [
+                        "<your to the user's OPTION number 0 of the question>",
+                        "<your to the user's OPTION number 1 of the question>",
+                        "<your to the user's OPTION number 2 of the question>",
+                        "<your to the user's OPTION number 3 of the question>"
+                    ],
+                    "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+                    "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+                },
+                {
+                  "question": "<your to the user's question paragraph. The question 2 of the quiz . Must be contained in a single paragraph>"
+                  "options": [
+                      "<your to the user's OPTION number 0 of the question>",
+                      "<your to the user's OPTION number 1 of the question>",
+                      "<your to the user's OPTION number 2 of the question>",
+                      "<your to the user's OPTION number 3 of the question>"
+                  ],
+                  "answer": <your to the user's question answer. The single number of the CORRECT OPTION of the question.>
+                  "explanation": "<yout yo yhe user's answer explanation. The explanation of the answer with up to 400 characters.>"
+                },
+
+            ]
+        }
+
+        *Requirement 2: 
+        - Check the text given by the user and create questions according to the amount of the given text.
+        - You need to create a minimum of 5 questions and a maximum of 20 questions, depending on the length and complexity of the given text.
+        - If the input text is short, generate fewer questions. If the input text is long, generate more questions.
+
+        *Requirement 3: 
+        - Please identify the LANGUAGE of the given text and create the quiz in the detected language.
+        - For example, if the content of the text is in Korean, the quiz should be provided in Korean.
+        - If the TEXT contains a mix of several languages, detect the language as Korean.
+
+        *Requirement 4:
+        - The distribution of options and answers should be evenly distributed.
+        - The answer of the question should not be too many zeros. 
     `;
 
     const completion = await openai.chat.completions.create({
