@@ -269,7 +269,7 @@ async function getTests(text) {
 
     let system_prompt = `
       You are an Education Expert, specialized in creating educational contents and assessments for university students. 
-      You are going to generate quiz questions based on the provided text of a lecture material. 
+      You are going to generate 10 quiz questions based on the provided text of a lecture material. 
       Here is how you will create the quiz questions: 
 
       *Requirement 1: output needs to be designed with following JSON format:
@@ -304,7 +304,7 @@ async function getTests(text) {
 
         *Requirement 2: 
         - Check the text given by the user and create questions according to the amount of the given text.
-        - You need to create a minimum of 5 questions and a maximum of 20 questions, depending on the length and complexity of the given text.
+        - You need to create 10 questions.
         - If the input text is short, generate fewer questions. If the input text is long, generate more questions.
 
         *Requirement 3: 
